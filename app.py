@@ -2,7 +2,7 @@ import os
 from flask import Flask, request, abort
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
-from linebot.models import *https://github.com/lpc93/LineBo/blob/main/app.py
+from linebot.models import *
 from pygooglenews import GoogleNews
 from datetime import datetime
 from dotenv import load_dotenv
@@ -111,4 +111,3 @@ def welcome(event):
 if __name__ == "__main__":
     port = int(os.getenv('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
-
