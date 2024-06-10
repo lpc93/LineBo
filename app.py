@@ -1,119 +1,82 @@
-import os
 from flask import Flask, request, abort
-from linebot import LineBotApi, WebhookHandler
-from linebot.exceptions import InvalidSignatureError
-from linebot.models import MessageEvent, TextMessage, TextSendMessage
-from pygooglenews import GoogleNews
 import requests
-from dotenv import load_dotenv
-
-# 加載環境變數
-load_dotenv()
 
 app = Flask(__name__)
-# Channel Access Token
-line_bot_api = LineBotApi(os.getenv('CHANNEL_ACCESS_TOKEN'))
-# Channel Secret
-handler = WebhookHandler(os.getenv('CHANNEL_SECRET'))
 
-# 監聽所有來自 /callback 的 Post Request
-@app.route("/callback", methods=['POST'])
-def callback():
-    # get X-Line-Signature header value
-    signature = request.headers['X-Line-Signature']
-    # get request body as text
-    body = request.get_data(as_text=True)
-    app.logger.info("Request body: " + body)
-    # handle webhook body
-    try:
-        handler.handle(body, signature)
-    except InvalidSignatureError:
-        abort(400)
-    return 'OK'
+# 英中翻譯功能
+def translate_english_to_chinese(text):
+    # 在這裡實現英中翻譯的功能，例如使用 Google 翻譯 API 或其他相關服務
+    return "這是英中翻譯的示例結果"
 
-def get_weather(city_name):
-    try:
-        response = requests.get(f"http://wttr.in/{city_name}?format=3")
-        if response.status_code == 200:
-            return response.text
-        else:
-            return "無法取得天氣資訊，請檢查城市名稱是否正確。"
-    except Exception as e:
-        return f"取得天氣資訊時出錯：{str(e)}"
+# 天氣查詢功能
+def get_weather(city):
+    # 在這裡實現天氣查詢的功能，例如使用天氣 API 或其他相關服務
+    return "這是天氣查詢的示例結果"
 
+# 新聞查詢功能
 def get_news(keyword):
-    try:
-        gn = GoogleNews(lang='zh-TW', country='TW')
-        search = gn.search(keyword)
-        if search['entries']:
-            entries = search['entries'][:3]  # 取前3條新聞
-            news = "\n\n".join([f"{entry.get('title', '無標題')}\n{entry.get('link', '無鏈接')}" for entry in entries])
-            return news
-        else:
-            return "無法取得新聞資訊，請檢查關鍵詞是否正確。"
-    except Exception as e:
-        return f"取得新聞資訊時出錯：{str(e)}"
+    # 在這裡實現新聞查詢的功能，例如使用新聞 API 或其他相關服務
+    return "這是新聞查詢的示例結果"
 
-def get_local_time(city_name):
-    try:
-        response = requests.get(f"http://worldtimeapi.org/api/timezone/{city_name}")
-        data = response.json()
-        if response.status_code == 200:
-            local_time = data['datetime']
-            return f"{city_name} 的當地時間是 {local_time}"
-        else:
-            return "無法取得當地時間，請檢查城市名稱是否正確。"
-    except Exception as e:
-        return f"取得當地時間時出錯：{str(e)}"
+# 當地時間查詢功能
+def get_local_time(city):
+    # 在這裡實現當地時間查詢的功能，例如使用時區轉換 API 或其他相關服務
+    return "這是當地時間查詢的示例結果"
 
-# 處理訊息
-@handler.add(MessageEvent, message=TextMessage)
-def handle_message(event):
-    msg = event.message.text
-    if msg.startswith("天氣"):
-        city_name = msg.split("天氣", 1)[1].strip()
-        if city_name:
-            weather_info = get_weather(city_name)
-            line_bot_api.reply_message(event.reply_token, TextSendMessage(text=weather_info))
-        else:
-            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="請提供城市名稱，例如：天氣 台北"))
-    elif msg.startswith("新聞"):
-        keyword = msg.split("新聞", 1)[1].strip()
-        if keyword:
-            news_info = get_news(keyword)
-            line_bot_api.reply_message(event.reply_token, TextSendMessage(text=news_info))
-        else:
-            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="請提供新聞關鍵詞，例如：新聞 科技"))
-    elif msg.startswith("時間"):
-        city_name = msg.split("時間", 1)[1].strip()
-        if city_name:
-            time_info = get_local_time(city_name)
-            line_bot_api.reply_message(event.reply_token, TextSendMessage(text=time_info))
-        else:
-            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="請提供城市名稱，例如：時間 Asia/Taipei"))
-    else:
-        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=msg))
+# 情緒支持功能
+def emotional_support():
+    # 在這裡實現情緒支持的功能，例如提問一些情緒相關的問題，並根據用戶回答給予適當的支持
+    return "這是情緒支持的示例結果"
 
-@handler.add(PostbackEvent)
-def handle_postback(event):
-    print(event.postback.data)
+# 處理 LINE 請求
+@app.route("/", methods=['POST'])
+def line_callback():
+    data = request.get_json()
+    reply_token = data['events'][0]['replyToken']
+    message_type = data['events'][0]['message']['type']
+    message_text = data['events'][0]['message']['text']
 
-@handler.add(MemberJoinedEvent)
-def welcome(event):
-    uid = event.joined.members[0].user_id
-    gid = event.source.group_id
-    profile = line_bot_api.get_group_member_profile(gid, uid)
-    name = profile.display_name
-    message = TextSendMessage(text=f'{name} 歡迎加入')
-    line_bot_api.reply_message(event.reply_token, message)
+    if message_type == 'text':
+        reply_message = ""
+        if "翻譯" in message_text:
+            reply_message = translate_english_to_chinese(message_text)
+        elif "天氣" in message_text:
+            city = message_text.split("天氣")[1].strip()
+            reply_message = get_weather(city)
+        elif "新聞" in message_text:
+            keyword = message_text.split("新聞")[1].strip()
+            reply_message = get_news(keyword)
+        elif "時間" in message_text:
+            city = message_text.split("時間")[1].strip()
+            reply_message = get_local_time(city)
+        elif "情緒" in message_text:
+            reply_message = emotional_support()
+        else:
+            reply_message = "抱歉，我暫時無法理解你的輸入。"
+
+        # 回覆訊息給用戶
+        reply(reply_token, reply_message)
+
+    return "OK"
+
+# 回覆訊息給用戶的函數
+def reply(reply_token, reply_message):
+    headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer YOUR_CHANNEL_ACCESS_TOKEN'  # 請替換為你的 LINE Channel Access Token
+    }
+    data = {
+        'replyToken': reply_token,
+        'messages': [
+            {
+                'type': 'text',
+                'text': reply_message
+            }
+        ]
+    }
+    response = requests.post('https://api.line.me/v2/bot/message/reply', headers=headers, json=data)
+    print(response.json())
 
 if __name__ == "__main__":
-    port = int(os.getenv('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=5000)
 
-        
-        
-import os
-if __name__ == "__main__":
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
